@@ -16,6 +16,64 @@ type CaptureState = "preview" | "captured" | "error";
 const DEFAULT_CAMERA_ERROR_MESSAGE =
   "We couldn't start your camera. Please allow camera access in your browser settings and try again.";
 
+type IconProps = {
+  className?: string;
+};
+
+const IconCapture = ({ className }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-4 w-4 sm:h-5 sm:w-5 ${className ?? ""}`}
+    aria-hidden
+  >
+    <path d="M2.25 12c0-2.485 2.015-4.5 4.5-4.5h.75l1.262-1.684a1.5 1.5 0 0 1 1.2-.566h4.576a1.5 1.5 0 0 1 1.2.566L16.95 7.5h.3a4.5 4.5 0 0 1 4.5 4.5v3.75a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V12Z" />
+    <circle cx={12} cy={13.5} r={3} />
+  </svg>
+);
+
+const IconRetake = ({ className }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-4 w-4 sm:h-5 sm:w-5 ${className ?? ""}`}
+    aria-hidden
+  >
+    <path d="M3.75 12a8.25 8.25 0 0 1 14.22-5.25H15.3" />
+    <path d="M20.25 12a8.25 8.25 0 0 1-14.22 5.25H8.7" />
+    <path d="M15 6.75h3v-3" />
+    <path d="M9 17.25h-3v3" />
+  </svg>
+);
+
+const IconDownload = ({ className }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-4 w-4 sm:h-5 sm:w-5 ${className ?? ""}`}
+    aria-hidden
+  >
+    <path d="M12 3.75v10.5" />
+    <path d="M8.25 10.5 12 14.25 15.75 10.5" />
+    <path d="M4.5 17.25h15" />
+  </svg>
+);
+
 const getCameraErrorMessage = (error: unknown): string => {
   if (error instanceof DOMException) {
     switch (error.name) {
@@ -293,27 +351,30 @@ export function PhotoBooth() {
           type="button"
           onClick={handleCapture}
           disabled={isCaptureDisabled}
-          className="rounded-full bg-white px-10 py-3 text-base font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-base font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
         >
-          Capture
+          <IconCapture />
+          <span>Capture</span>
         </button>
 
         <button
           type="button"
           onClick={handleRetake}
           disabled={state !== "captured"}
-          className="rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40"
         >
-          Retake
+          <IconRetake />
+          <span>Retake</span>
         </button>
 
         <button
           type="button"
           onClick={handleDownload}
           disabled={!photoDataUrl}
-          className="rounded-full border border-emerald-300 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30"
         >
-          Download
+          <IconDownload />
+          <span>Download</span>
         </button>
       </div>
     </div>

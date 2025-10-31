@@ -285,73 +285,75 @@ export function PhotoBooth() {
     state === "captured" || state === "error" || isLoading;
 
   return (
-    <div className="flex w-full flex-col items-center gap-8">
-      <div className="text-center text-lg text-white/70">
+    <div className="photobooth-layout flex w-full max-w-4xl flex-1 flex-col items-center gap-6 sm:gap-8">
+      <div className="photobooth-instructions text-center text-sm text-white/70 sm:text-base">
         <p>Position yourself inside the frame, then tap capture.</p>
       </div>
 
-      <div className="relative aspect-video w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)]">
-        {state !== "captured" && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            controls={false}
-            controlsList="nodownload nofullscreen noplaybackrate"
-            disablePictureInPicture
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        )}
+      <div className="photobooth-stage">
+        <div className="photobooth-frame relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)]">
+          {state !== "captured" && (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              controls={false}
+              controlsList="nodownload nofullscreen noplaybackrate"
+              disablePictureInPicture
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
 
-        {state === "captured" && photoDataUrl ? (
+          {state === "captured" && photoDataUrl ? (
+            <img
+              src={photoDataUrl}
+              alt="Captured photobooth frame"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
+
           <img
-            src={photoDataUrl}
-            alt="Captured photobooth frame"
-            className="absolute inset-0 h-full w-full object-cover"
+            ref={overlayRef}
+            src="/photo.png"
+            alt="Photobooth frame overlay"
+            className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+            draggable={false}
           />
-        ) : null}
 
-        <img
-          ref={overlayRef}
-          src="/photo.png"
-          alt="Photobooth frame overlay"
-          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-          draggable={false}
-        />
-
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
-            Initializing camera…
-          </div>
-        )}
-
-        {errorMessage && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-sm text-red-200">
-            <div className="flex flex-col items-center gap-4">
-              <p className="max-w-sm text-pretty text-base font-medium text-red-100">
-                {errorMessage}
-              </p>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="rounded-full border border-red-200/70 px-6 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-200/10"
-              >
-                Try again
-              </button>
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
+              Initializing camera…
             </div>
-          </div>
-        )}
+          )}
 
-        <canvas ref={canvasRef} className="hidden" aria-hidden />
+          {errorMessage && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-sm text-red-200">
+              <div className="flex flex-col items-center gap-4">
+                <p className="max-w-sm text-pretty text-base font-medium text-red-100">
+                  {errorMessage}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="rounded-full border border-red-200/70 px-6 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-200/10"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+
+          <canvas ref={canvasRef} className="hidden" aria-hidden />
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4">
+      <div className="photobooth-actions flex w-full flex-wrap items-center justify-center gap-3 sm:gap-4">
         <button
           type="button"
           onClick={handleCapture}
           disabled={isCaptureDisabled}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-base font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40 sm:px-8 sm:text-base"
         >
           <IconCapture />
           <span>Capture</span>
@@ -361,7 +363,7 @@ export function PhotoBooth() {
           type="button"
           onClick={handleRetake}
           disabled={state !== "captured"}
-          className="inline-flex items-center gap-2 rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40"
+          className="inline-flex items-center gap-2 rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40 sm:text-base"
         >
           <IconRetake />
           <span>Retake</span>
@@ -371,7 +373,7 @@ export function PhotoBooth() {
           type="button"
           onClick={handleDownload}
           disabled={!photoDataUrl}
-          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30"
+          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 px-6 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30 sm:text-base"
         >
           <IconDownload />
           <span>Download</span>

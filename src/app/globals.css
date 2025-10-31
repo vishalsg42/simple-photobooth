@@ -43,3 +43,78 @@ video::-webkit-media-controls-panel {
 video::-webkit-media-controls-start-playback-button {
   display: none !important;
 }
+
+.photobooth-layout {
+  width: 100%;
+  max-width: 64rem;
+}
+
+.photobooth-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.photobooth-actions button {
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.photobooth-actions button:active {
+  transform: translateY(1px);
+}
+
+.photobooth-bottom-note {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .photobooth-instructions {
+    display: none;
+  }
+}
+
+@media (max-height: 640px) and (orientation: landscape) {
+  .photobooth-layout {
+    display: grid;
+    grid-template-rows: min-content minmax(0, 1fr) min-content;
+    align-items: center;
+    justify-items: center;
+    gap: 1rem;
+    height: 100%;
+  }
+
+  .photobooth-stage {
+    align-items: center;
+  }
+
+  .photobooth-instructions {
+    display: none;
+  }
+
+  .photobooth-frame {
+    width: min(100%, calc((100vh - 5.5rem) * 16 / 9));
+    max-height: calc(100vh - 5.5rem);
+  }
+
+  @supports (height: 100dvh) {
+    .photobooth-frame {
+      width: min(100%, calc((100dvh - 5.5rem) * 16 / 9));
+      max-height: calc(100dvh - 5.5rem);
+    }
+  }
+
+  .photobooth-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .photobooth-actions button {
+    flex: 1 1 33%;
+    min-width: 0;
+  }
+
+  .photobooth-bottom-note {
+    display: none;
+  }
+}

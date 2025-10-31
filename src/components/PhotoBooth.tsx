@@ -293,7 +293,7 @@ export function PhotoBooth() {
           type="button"
           onClick={handleCapture}
           disabled={isCaptureDisabled}
-          className="rounded-full bg-white px-10 py-3 text-base font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
+          className="rounded-full bg-white px-10 py-3 text-base font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40 cursor-pointer"
         >
           Capture
         </button>
@@ -302,7 +302,7 @@ export function PhotoBooth() {
           type="button"
           onClick={handleRetake}
           disabled={state !== "captured"}
-          className="rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40"
+          className="rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/40 cursor-pointer"
         >
           Retake
         </button>
@@ -311,7 +311,7 @@ export function PhotoBooth() {
           type="button"
           onClick={handleDownload}
           disabled={!photoDataUrl}
-          className="rounded-full border border-emerald-300 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30"
+          className="rounded-full border border-emerald-300 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:border-emerald-200/30 disabled:text-emerald-200/30 cursor-pointer"
         >
           Download
         </button>

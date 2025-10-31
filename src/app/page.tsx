@@ -1,4 +1,4 @@
-import { PhotoBooth } from "@/components/PhotoBooth";
+import { PhotoBoothShell } from "@/components/PhotoBoothShell";
 
 export default function Home() {
   return (
@@ -7,12 +7,9 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-y-0 left-1/2 -z-20 h-[120%] w-[140%] -translate-x-1/2 bg-[radial-gradient(circle_at_center,rgba(14,255,198,0.1),transparent_60%)] blur-3xl" />
 
       <header className="flex flex-col items-center gap-3 text-center">
-        <span className="text-xs uppercase tracking-[0.3em] text-white/60">
-          Photobooth
-        </span>
       </header>
 
-      <PhotoBooth />
+      <PhotoBoothShell />
 
       <p className="text-center text-xs text-white/40">
         Need to try again? Use Retake to return to the live preview.

@@ -74,17 +74,31 @@ video::-webkit-media-controls-start-playback-button {
 }
 
 @media (max-height: 640px) and (orientation: landscape) {
+  .photobooth-main {
+    justify-content: center;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
   .photobooth-layout {
-    display: grid;
-    grid-template-rows: min-content minmax(0, 1fr) min-content;
+    flex-direction: row;
     align-items: center;
-    justify-items: center;
-    gap: 1rem;
-    height: 100%;
+    justify-content: center;
+    gap: clamp(0.75rem, 3vw, 1.5rem);
+    max-width: none;
+    width: 100%;
+    height: auto;
+    padding: 0 clamp(0.5rem, 3vw, 1rem);
   }
 
   .photobooth-stage {
+    flex: 1 1 0;
+    display: flex;
     align-items: center;
+    justify-content: center;
+    height: auto;
+    max-height: calc(100vh - 2rem);
+    margin: 0 auto;
   }
 
   .photobooth-instructions {
@@ -92,29 +106,61 @@ video::-webkit-media-controls-start-playback-button {
   }
 
   .photobooth-frame {
-    width: min(100%, calc((100vh - 5.5rem) * 16 / 9));
-    max-height: calc(100vh - 5.5rem);
-  }
-
-  @supports (height: 100dvh) {
-    .photobooth-frame {
-      width: min(100%, calc((100dvh - 5.5rem) * 16 / 9));
-      max-height: calc(100dvh - 5.5rem);
-    }
+    aspect-ratio: 16 / 9;
+    width: min(100%, calc((100vh - 2rem) * 16 / 9));
+    max-height: calc(100vh - 2rem);
+    max-width: clamp(18rem, calc((100vh - 2rem) * 16 / 9), 32rem);
   }
 
   .photobooth-actions {
-    width: 100%;
-    justify-content: space-between;
-    gap: 0.75rem;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: center;
+    gap: clamp(0.55rem, 2vw, 0.8rem);
+    width: clamp(8.5rem, 26vw, 11rem);
+    height: auto;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
   }
 
   .photobooth-actions button {
-    flex: 1 1 33%;
+    flex: none;
+    width: 100%;
     min-width: 0;
+    padding: clamp(0.45rem, 1.5vw, 0.6rem) clamp(0.9rem, 2.4vw, 1.15rem);
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    gap: clamp(0.45rem, 1.8vw, 0.65rem);
+    justify-content: center;
+  }
+
+  .photobooth-actions button svg {
+    width: clamp(0.85rem, 2.2vw, 1rem) !important;
+    height: clamp(0.85rem, 2.2vw, 1rem) !important;
+  }
+
+  .photobooth-actions button span {
+    line-height: 1.1;
   }
 
   .photobooth-bottom-note {
     display: none;
+  }
+
+  @supports (height: 100dvh) {
+    .photobooth-main {
+      min-height: 100dvh;
+    }
+
+    .photobooth-frame {
+      width: min(100%, calc((100dvh - 2rem) * 16 / 9));
+      max-height: calc(100dvh - 2rem);
+    }
+
+    .photobooth-actions {
+      max-height: calc(100dvh - 2rem);
+    }
   }
 }

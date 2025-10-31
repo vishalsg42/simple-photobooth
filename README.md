@@ -20,6 +20,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Photobooth overlay
+
+- The live photobooth lives in `src/app/page.tsx` and renders the `PhotoBooth` client component from `src/components/PhotoBooth.tsx`.
+- A temporary border overlay is drawn on the canvas for now. Once the final frame asset is available, replace the placeholder by swapping the overlay `<div>` elements or by compositing the provided PNG/SVG inside the `PhotoBooth` component.
+- If the asset should sit above the live preview, import it into `PhotoBooth.tsx` (for example via `/public` or `next/image`) and position it absolutely within the main container.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

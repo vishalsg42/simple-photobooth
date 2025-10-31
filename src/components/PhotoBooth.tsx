@@ -41,6 +41,7 @@ const getCameraErrorMessage = (error: unknown): string => {
 export function PhotoBooth() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLImageElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isMountedRef = useRef(false);
   const permissionStateRef = useRef<PermissionState | null>(null);
@@ -169,6 +170,7 @@ export function PhotoBooth() {
   const handleCapture = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    const overlayImage = overlayRef.current;
     if (!video || !canvas || state === "error") {
       return;
     }
@@ -186,15 +188,9 @@ export function PhotoBooth() {
 
     context.drawImage(video, 0, 0, width, height);
 
-    const borderThickness = Math.round(width * 0.03);
-    context.lineWidth = borderThickness;
-    context.strokeStyle = "rgba(255, 255, 255, 0.9)";
-    context.strokeRect(
-      borderThickness / 2,
-      borderThickness / 2,
-      width - borderThickness,
-      height - borderThickness,
-    );
+    if (overlayImage && overlayImage.complete) {
+      context.drawImage(overlayImage, 0, 0, width, height);
+    }
 
     const dataUrl = canvas.toDataURL("image/png");
     setPhotoDataUrl(dataUrl);
@@ -258,8 +254,13 @@ export function PhotoBooth() {
           />
         ) : null}
 
-        <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] border-[18px] border-white/80 mix-blend-screen" />
-        <div className="pointer-events-none absolute inset-10 rounded-[2rem] border border-white/20" />
+        <img
+          ref={overlayRef}
+          src="/photo.png"
+          alt="Photobooth frame overlay"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+          draggable={false}
+        />
 
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">

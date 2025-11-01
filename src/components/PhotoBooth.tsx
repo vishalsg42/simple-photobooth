@@ -2,14 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const VIDEO_CONSTRAINTS: MediaStreamConstraints = {
+type FacingMode = "user" | "environment" | "left" | "right";
+
+type CameraSupport = {
+  hasEnvironment: boolean;
+  hasMultipleInputs: boolean;
+};
+
+const BASE_VIDEO_SETTINGS: MediaTrackConstraints = {
+  width: { ideal: 1600 },
+  height: { ideal: 900 },
+};
+
+const createVideoConstraints = (
+  facingMode: FacingMode,
+): MediaStreamConstraints => ({
   audio: false,
   video: {
-    width: { ideal: 1600 },
-    height: { ideal: 900 },
-    facingMode: "user",
+    ...BASE_VIDEO_SETTINGS,
+    facingMode,
   },
-};
+});
 
 type CaptureState = "preview" | "captured" | "error";
 
@@ -74,6 +87,28 @@ const IconDownload = ({ className }: IconProps) => (
   </svg>
 );
 
+const IconSwitchCamera = ({ className }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-4 w-4 sm:h-5 sm:w-5 ${className ?? ""}`}
+    aria-hidden
+  >
+    <path d="M6.3 7h11.4A1.8 1.8 0 0 1 19.5 8.8v6.4a1.8 1.8 0 0 1-1.8 1.8H6.3A1.8 1.8 0 0 1 4.5 15.2V8.8A1.8 1.8 0 0 1 6.3 7Z" />
+    <path d="M9.4 7 10.4 5.4h3.2L14.6 7" />
+    <circle cx={12} cy={12} r={2.3} />
+    <path d="M6.2 17.8c2.3 3 6.9 3 9.2 0" />
+    <path d="M17.5 17.8H20" />
+    <path d="M20 17.8 18.2 16" />
+    <path d="M20 17.8 18.2 19.6" />
+  </svg>
+);
+
 const getCameraErrorMessage = (error: unknown): string => {
   if (error instanceof DOMException) {
     switch (error.name) {
@@ -108,6 +143,11 @@ export function PhotoBooth() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<FacingMode>("user");
+  const [cameraSupport, setCameraSupport] = useState<CameraSupport>({
+    hasEnvironment: false,
+    hasMultipleInputs: false,
+  });
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -159,65 +199,134 @@ export function PhotoBooth() {
     return true;
   }, [queryCameraPermission]);
 
-  const startCamera = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
+  const determineSwitchAvailability = useCallback(async (stream: MediaStream) => {
+    const track = stream.getVideoTracks()[0];
+    let hasEnvironment = false;
+    let hasMultipleInputs = false;
 
-    if (!(await ensureCameraPermission())) {
-      setIsLoading(false);
-      return;
+    if (track && typeof track.getCapabilities === "function") {
+      const capabilities = track.getCapabilities();
+      const { facingMode } = capabilities;
+      if (Array.isArray(facingMode)) {
+        hasEnvironment = facingMode.includes("environment");
+      }
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(
-        VIDEO_CONSTRAINTS,
-      );
+    if (navigator.mediaDevices?.enumerateDevices) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((device) => device.kind === "videoinput");
 
-      if (!isMountedRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
+        hasMultipleInputs = videoInputs.length > 1;
+
+        if (!hasEnvironment) {
+          hasEnvironment = videoInputs.some((device) => {
+            const label = (device.label ?? "").toLowerCase();
+            return (
+              label.includes("back") ||
+              label.includes("rear") ||
+              label.includes("environment") ||
+              label.includes("world")
+            );
+          });
+        }
+      } catch (deviceError) {
+        console.warn("Unable to enumerate media devices", deviceError);
       }
+    }
 
-      streamRef.current = stream;
+    setCameraSupport({
+      hasEnvironment,
+      hasMultipleInputs,
+    });
+  }, []);
 
-      const videoElement = videoRef.current;
-      if (videoElement) {
-        videoElement.srcObject = stream;
-        videoElement.onloadedmetadata = () => {
-          videoElement
-            .play()
-            .catch(() => {
-              /* Autoplay policies may block playback until user interaction */
-            });
-        };
-      }
+  const startCamera = useCallback(
+    async (mode: FacingMode) => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      setCameraSupport({ hasEnvironment: false, hasMultipleInputs: false });
 
-      setState("preview");
-    } catch (error) {
-      console.error("Unable to access the camera", error);
-
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      stopCamera();
-      const message = getCameraErrorMessage(error);
-      setErrorMessage(
-        permissionStateRef.current === "denied"
-          ? "Camera access is blocked. Enable it from your browser's site settings, then reload this page to continue."
-          : message,
-      );
-      setState("error");
-    } finally {
-      if (isMountedRef.current) {
+      if (!(await ensureCameraPermission())) {
         setIsLoading(false);
+        return;
       }
-    }
-  }, [ensureCameraPermission, stopCamera]);
+
+      let didFallback = false;
+
+      try {
+        stopCamera();
+
+        const stream = await navigator.mediaDevices.getUserMedia(
+          createVideoConstraints(mode),
+        );
+
+        if (!isMountedRef.current) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        const videoElement = videoRef.current;
+        if (videoElement) {
+          videoElement.srcObject = stream;
+          videoElement.onloadedmetadata = () => {
+            videoElement
+              .play()
+              .catch(() => {
+                /* Autoplay policies may block playback until user interaction */
+              });
+          };
+        }
+
+        await determineSwitchAvailability(stream);
+
+        setFacingMode(mode);
+        setState("preview");
+      } catch (error) {
+        console.error("Unable to access the camera", error);
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        stopCamera();
+        const message = getCameraErrorMessage(error);
+
+        if (
+          mode !== "user" &&
+          error instanceof DOMException &&
+          (error.name === "OverconstrainedError" || error.name === "NotFoundError")
+        ) {
+          console.warn("Falling back to user-facing camera", error);
+          setCameraSupport({
+            hasEnvironment: false,
+            hasMultipleInputs: false,
+          });
+          didFallback = true;
+          void startCamera("user");
+          return;
+        }
+
+        setErrorMessage(
+          permissionStateRef.current === "denied"
+            ? "Camera access is blocked. Enable it from your browser's site settings, then reload this page to continue."
+            : message,
+        );
+        setState("error");
+      } finally {
+        if (isMountedRef.current && !didFallback) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [determineSwitchAvailability, ensureCameraPermission, stopCamera],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
-    void startCamera();
+    void startCamera("user");
 
     return () => {
       isMountedRef.current = false;
@@ -271,43 +380,62 @@ export function PhotoBooth() {
     setPhotoDataUrl(null);
     setState("preview");
     setErrorMessage(null);
-    void startCamera();
-  }, [startCamera]);
+    void startCamera(facingMode);
+  }, [facingMode, startCamera]);
 
   const handleRetry = useCallback(() => {
     setPhotoDataUrl(null);
     setErrorMessage(null);
     setState("preview");
-    void startCamera();
-  }, [startCamera]);
+    void startCamera(facingMode);
+  }, [facingMode, startCamera]);
+
+  const isSwitchAvailable = cameraSupport.hasEnvironment;
+  
+  const handleSwitchCamera = useCallback(() => {
+    if (isLoading || !isSwitchAvailable || state !== "preview") {
+      return;
+    }
+
+    const nextFacingMode: FacingMode =
+      facingMode === "user" ? "environment" : "user";
+
+    setPhotoDataUrl(null);
+    setState("preview");
+    setErrorMessage(null);
+    void startCamera(nextFacingMode);
+  }, [facingMode, isLoading, isSwitchAvailable, startCamera, state]);
 
   const isCaptureDisabled =
     state === "captured" || state === "error" || isLoading;
 
-  return (
-    <div className="photobooth-layout flex w-full max-w-4xl flex-1 flex-col items-center gap-6 sm:gap-8">
-      <div className="photobooth-instructions text-center text-sm text-white/70 sm:text-base">
-        <p>Position yourself inside the frame, then tap capture.</p>
-      </div>
+  const showSwitchButton =
+    isSwitchAvailable && state === "preview" && !errorMessage;
 
-      <div className="photobooth-stage">
-        <div className="photobooth-frame relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)]">
-          {state !== "captured" && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              controls={false}
-              controlsList="nodownload nofullscreen noplaybackrate"
-              disablePictureInPicture
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
+    return (
+      <div className="photobooth-layout flex w-full max-w-4xl flex-1 flex-col items-center gap-6 sm:gap-8">
+        <div className="photobooth-instructions text-center text-sm text-white/70 sm:text-base">
+          <p>Position yourself inside the frame, then tap capture.</p>
+        </div>
 
-          {state === "captured" && photoDataUrl ? (
-            <img
-              src={photoDataUrl}
+        <div className="photobooth-stage">
+          <div className="photobooth-frame relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)]">
+            {state !== "captured" && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                controls={false}
+                controlsList="nodownload nofullscreen noplaybackrate"
+                disablePictureInPicture
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            )}
+
+            {state === "captured" && photoDataUrl ? (
+              <img
+                src={photoDataUrl}
               alt="Captured photobooth frame"
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -349,6 +477,22 @@ export function PhotoBooth() {
       </div>
 
       <div className="photobooth-actions flex w-full flex-wrap items-center justify-center gap-3 sm:gap-4">
+        {showSwitchButton && (
+          <button
+            type="button"
+            onClick={handleSwitchCamera}
+            disabled={isLoading || state !== "preview"}
+            aria-label={
+              facingMode === "user"
+                ? "Switch to back camera"
+                : "Switch to front camera"
+            }
+            className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40 sm:px-8 sm:text-base cursor-pointer"
+          >
+            <IconSwitchCamera className="h-5 w-5" /> Switch Camera
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleCapture}

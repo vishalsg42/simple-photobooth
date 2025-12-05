@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NameBranchModal } from "./NameBranchModal";
 
 type FacingMode = "user" | "environment" | "left" | "right";
 
@@ -148,6 +149,55 @@ export function PhotoBooth() {
     hasEnvironment: false,
     hasMultipleInputs: false,
   });
+  const [showModal, setShowModal] = useState(true);
+  const [name, setName] = useState("");
+  const [branch, setBranch] = useState("");
+  const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number; percentageX: number; percentageY: number } | null>(null);
+
+  // Debug: Log when name or branch changes
+  useEffect(() => {
+    console.log("=== Name/Branch State Updated ===");
+    console.log("Name:", name);
+    console.log("Branch:", branch);
+    console.log("Show Modal:", showModal);
+  }, [name, branch, showModal]);
+
+  // Handle mouse move on captured image to get coordinates
+  const handleImageMouseMove = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    console.log("Mouse move event triggered");
+    const img = e.currentTarget;
+    const rect = img.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const percentageX = (x / rect.width) * 100;
+    const percentageY = (y / rect.height) * 100;
+
+    setMouseCoords({ x, y, percentageX, percentageY });
+    console.log("Mouse position:", { x, y, percentageX, percentageY });
+  }, []);
+
+  const handleImageClick = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    console.log("Click event triggered on image");
+    e.stopPropagation();
+    const img = e.currentTarget;
+    const rect = img.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const percentageX = (x / rect.width) * 100;
+    const percentageY = (y / rect.height) * 100;
+
+    console.log("=== Clicked Coordinates ===");
+    console.log("Pixel coordinates:", { x, y });
+    console.log("Percentage coordinates:", { percentageX, percentageY });
+    console.log("Image dimensions:", { width: rect.width, height: rect.height });
+
+    // Also calculate what these would be in canvas coordinates
+    const videoWidth = videoRef.current?.videoWidth || 1600;
+    const videoHeight = videoRef.current?.videoHeight || 900;
+    const canvasX = (percentageX / 100) * videoWidth;
+    const canvasY = (percentageY / 100) * videoHeight;
+    console.log("Canvas coordinates (estimated):", { canvasX, canvasY });
+  }, []);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -342,28 +392,102 @@ export function PhotoBooth() {
       return;
     }
 
-    const width = video.videoWidth || 1600;
-    const height = video.videoHeight || 900;
+    const videoWidth = video.videoWidth || 1600;
+    const videoHeight = video.videoHeight || 900;
+    const videoAspectRatio = videoWidth / videoHeight;
 
-    canvas.width = width;
-    canvas.height = height;
+    // Use video dimensions for canvas
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
 
     const context = canvas.getContext("2d");
     if (!context) {
       return;
     }
 
-    context.drawImage(video, 0, 0, width, height);
+    // Draw video frame to fill canvas
+    context.drawImage(video, 0, 0, videoWidth, videoHeight);
 
+    // Draw overlay image stretched to fill video frame (ignore aspect ratio)
     if (overlayImage && overlayImage.complete) {
-      context.drawImage(overlayImage, 0, 0, width, height);
+      // Stretch to fill both width and height exactly
+      const x = 0;
+      const y = 0;
+      const scaledWidth = videoWidth;
+      const scaledHeight = videoHeight;
+
+      context.drawImage(overlayImage, x, y, scaledWidth, scaledHeight);
+      console.log("Overlay image drawn successfully (stretched to fill frame)");
+      console.log("Overlay image original dimensions:", {
+        width: overlayImage.naturalWidth,
+        height: overlayImage.naturalHeight
+      });
+      console.log("Overlay image scaled dimensions:", { scaledWidth, scaledHeight });
+      console.log("Overlay image position:", { x, y });
+      console.log("Video dimensions:", { videoWidth, videoHeight });
+      console.log("Name:", name, "Branch:", branch);
+
+      // Render Name and Branch text on the canvas
+      if (name && branch) {
+        // Use percentage-based positioning for responsive text placement
+        // These percentages were determined by clicking on the blank lines in the preview
+        // Name: X: 19.97%, Y: 85.42%
+        // Branch: X: 21.92%, Y: 89.24%
+        const nameXPercent = 19.97;
+        const nameYPercent = 85.42;
+        const branchXPercent = 21.92;
+        const branchYPercent = 89.24;
+
+        // Calculate canvas coordinates from percentages (responsive to any canvas size)
+        const nameX = (nameXPercent / 100) * videoWidth;
+        const nameY = (nameYPercent / 100) * videoHeight;
+        const branchX = (branchXPercent / 100) * videoWidth;
+        const branchY = (branchYPercent / 100) * videoHeight;
+
+        // Font size scales with canvas width for responsiveness
+        // Base font size on 1600px width, scale proportionally
+        const baseFontSize = 32; // Base size for 1600px width
+        const fontSize = Math.max(20, Math.round((baseFontSize / 1600) * videoWidth));
+
+        console.log("=== Text Rendering ===");
+        console.log("Canvas dimensions:", { videoWidth, videoHeight });
+        console.log("Name position:", { x: nameX, y: nameY, xPercent: nameXPercent, yPercent: nameYPercent });
+        console.log("Branch position:", { x: branchX, y: branchY, xPercent: branchXPercent, yPercent: branchYPercent });
+        console.log("Font size:", fontSize);
+        console.log("Text values:", { name: name.trim(), branch: branch.trim() });
+
+        context.fillStyle = "#FFFFFF";
+        context.font = `bold ${fontSize}px sans-serif`;
+        context.textAlign = "left";
+        context.textBaseline = "middle";
+
+        // Draw text with shadow for better visibility
+        context.shadowColor = "rgba(0, 0, 0, 0.9)";
+        context.shadowBlur = 5;
+        context.shadowOffsetX = 2;
+        context.shadowOffsetY = 2;
+
+        // Draw the text at the exact positions
+        context.fillText(name.trim(), nameX, nameY);
+        context.fillText(branch.trim(), branchX, branchY);
+
+        // Reset shadow
+        context.shadowColor = "transparent";
+        context.shadowBlur = 0;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+
+        console.log("Text drawn successfully");
+      } else {
+        console.log("Name or branch missing:", { name, branch });
+      }
     }
 
     const dataUrl = canvas.toDataURL("image/png");
     setPhotoDataUrl(dataUrl);
     setState("captured");
     stopCamera();
-  }, [state, stopCamera]);
+  }, [state, stopCamera, name, branch]);
 
   const handleDownload = useCallback(() => {
     if (!photoDataUrl) {
@@ -391,7 +515,7 @@ export function PhotoBooth() {
   }, [facingMode, startCamera]);
 
   const isSwitchAvailable = cameraSupport.hasEnvironment;
-  
+
   const handleSwitchCamera = useCallback(() => {
     if (isLoading || !isSwitchAvailable || state !== "preview") {
       return;
@@ -406,20 +530,68 @@ export function PhotoBooth() {
     void startCamera(nextFacingMode);
   }, [facingMode, isLoading, isSwitchAvailable, startCamera, state]);
 
+  const handleModalSubmit = useCallback((submittedName: string, submittedBranch: string) => {
+    console.log("=== Modal Submit Called ===");
+    console.log("Submitted Name:", submittedName);
+    console.log("Submitted Branch:", submittedBranch);
+    setName(submittedName);
+    setBranch(submittedBranch);
+    setShowModal(false);
+    console.log("Modal closed, name and branch set");
+  }, []);
+
   const isCaptureDisabled =
-    state === "captured" || state === "error" || isLoading;
+    state === "captured" || state === "error" || isLoading || showModal;
 
   const showSwitchButton =
-    isSwitchAvailable && state === "preview" && !errorMessage;
+    isSwitchAvailable && state === "preview" && !errorMessage && !showModal;
 
     return (
-      <div className="photobooth-layout flex w-full max-w-4xl flex-1 flex-col items-center gap-6 sm:gap-8">
+      <>
+        {showModal && <NameBranchModal onSubmit={handleModalSubmit} />}
+        <div className="photobooth-layout flex w-full max-w-4xl flex-1 flex-col items-center gap-6 sm:gap-8">
         <div className="photobooth-instructions text-center text-sm text-white/70 sm:text-base">
           <p>Position yourself inside the frame, then tap capture.</p>
         </div>
 
         <div className="photobooth-stage">
-          <div className="photobooth-frame relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)]">
+          <div
+            className="photobooth-frame relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-black/80 shadow-[0_40px_80px_-40px_rgba(15,15,15,0.8)] cursor-crosshair"
+            onMouseMove={(e) => {
+              if (!showModal && state === "preview") {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const percentageX = (x / rect.width) * 100;
+                const percentageY = (y / rect.height) * 100;
+
+                setMouseCoords({ x, y, percentageX, percentageY });
+                console.log("Preview mouse position:", { x, y, percentageX, percentageY });
+              }
+            }}
+            onClick={(e) => {
+              if (!showModal && state === "preview") {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const percentageX = (x / rect.width) * 100;
+                const percentageY = (y / rect.height) * 100;
+
+                console.log("=== Clicked Coordinates (Preview) ===");
+                console.log("Pixel coordinates:", { x, y });
+                console.log("Percentage coordinates:", { percentageX, percentageY });
+                console.log("Container dimensions:", { width: rect.width, height: rect.height });
+
+                // Calculate canvas coordinates
+                const videoWidth = videoRef.current?.videoWidth || 1600;
+                const videoHeight = videoRef.current?.videoHeight || 900;
+                const canvasX = (percentageX / 100) * videoWidth;
+                const canvasY = (percentageY / 100) * videoHeight;
+                console.log("Canvas coordinates (for text positioning):", { canvasX, canvasY });
+                console.log("Use these percentages for text:", { percentageX, percentageY });
+              }
+            }}
+          >
             {state !== "captured" && (
               <video
                 ref={videoRef}
@@ -429,25 +601,80 @@ export function PhotoBooth() {
                 controls={false}
                 controlsList="nodownload nofullscreen noplaybackrate"
                 disablePictureInPicture
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-fit"
               />
             )}
 
             {state === "captured" && photoDataUrl ? (
-              <img
-                src={photoDataUrl}
-              alt="Captured photobooth frame"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : null}
+              <>
+                <img
+                  src={photoDataUrl}
+                  alt="Captured photobooth frame"
+                  className="absolute inset-0 h-full w-full object-fit cursor-crosshair z-10"
+                  onMouseMove={handleImageMouseMove}
+                  onClick={handleImageClick}
+                  onMouseEnter={() => console.log("Mouse entered captured image")}
+                />
+                {mouseCoords && (
+                  <div className="absolute top-4 left-4 bg-black/90 text-white p-3 rounded-lg text-sm font-mono z-50 pointer-events-none border border-white/20">
+                    <div className="font-bold mb-1">Coordinates:</div>
+                    <div>X: {mouseCoords.x.toFixed(0)}px ({mouseCoords.percentageX.toFixed(2)}%)</div>
+                    <div>Y: {mouseCoords.y.toFixed(0)}px ({mouseCoords.percentageY.toFixed(2)}%)</div>
+                    <div className="text-yellow-300 mt-2 text-xs">Click to log to console</div>
+                  </div>
+                )}
+              </>
+            ) : null}
 
           <img
             ref={overlayRef}
-            src="/photo.png"
+            src="/photo_frame_2.png"
             alt="Photobooth frame overlay"
-            className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+            className="pointer-events-none absolute inset-0 h-full w-full select-none object-fit z-0"
             draggable={false}
           />
+
+          {/* Show name and branch text in preview */}
+          {!showModal && state === "preview" && name && branch && (
+            <div className="absolute inset-0 pointer-events-none z-20">
+              {/* Name text */}
+              <div
+                className="absolute text-white font-bold"
+                style={{
+                  left: "19.97%",
+                  top: "84.7%",
+                  transform: "translateY(-50%)",
+                  fontSize: "clamp(16px, 2vw, 32px)",
+                  textShadow: "2px 2px 4px rgba(0, 0, 0, 0.9)",
+                }}
+              >
+                {name}
+              </div>
+              {/* Branch text */}
+              <div
+                className="absolute text-white font-bold"
+                style={{
+                  left: "21.92%",
+                  top: "89.24%",
+                  transform: "translateY(-50%)",
+                  fontSize: "clamp(16px, 2vw, 32px)",
+                  textShadow: "2px 2px 4px rgba(0, 0, 0, 0.9)",
+                }}
+              >
+                {branch}
+              </div>
+            </div>
+          )}
+
+          {/* Show coordinates on preview */}
+          {!showModal && state === "preview" && mouseCoords && (
+            <div className="absolute top-4 left-4 bg-black/90 text-white p-3 rounded-lg text-sm font-mono z-50 pointer-events-none border border-white/20">
+              <div className="font-bold mb-1">Coordinates:</div>
+              <div>X: {mouseCoords.x.toFixed(0)}px ({mouseCoords.percentageX.toFixed(2)}%)</div>
+              <div>Y: {mouseCoords.y.toFixed(0)}px ({mouseCoords.percentageY.toFixed(2)}%)</div>
+              <div className="text-yellow-300 mt-2 text-xs">Click to log coordinates</div>
+            </div>
+          )}
 
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
@@ -524,6 +751,7 @@ export function PhotoBooth() {
         </button>
       </div>
     </div>
+      </>
   );
 }
 
